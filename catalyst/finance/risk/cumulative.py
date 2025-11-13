@@ -18,7 +18,7 @@ import logbook
 import numpy as np
 
 import pandas as pd
-from pandas.tseries.tools import normalize_date
+from catalyst.utils.compat import normalize_date
 
 from six import iteritems
 

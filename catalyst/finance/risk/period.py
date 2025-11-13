@@ -30,10 +30,10 @@ from empyrical import (
     alpha_beta_aligned,
     annual_volatility,
     downside_risk,
-    information_ratio,
     sharpe_ratio,
     sortino_ratio
 )
+from catalyst.utils.compat import information_ratio
 from catalyst.patches.stats import (
     max_drawdown,
     cum_returns,

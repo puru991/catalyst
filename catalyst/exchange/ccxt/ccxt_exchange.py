@@ -37,13 +37,13 @@ log = Logger('CCXT', level=LOG_LEVEL)
 SUPPORTED_EXCHANGES = dict(
     binance=ccxt.binance,
     bitfinex=ccxt.bitfinex,
-    bittrex=ccxt.bittrex,
+    # bittrex=ccxt.bittrex,  # Removed in CCXT 4.x
     poloniex=ccxt.poloniex,
     bitmex=ccxt.bitmex,
-    gdax=ccxt.gdax,
-    huobipro=ccxt.huobipro,
-    okex=ccxt.okex,
-    hitbtc=ccxt.hitbtc2,
+    # gdax=ccxt.gdax,  # Removed in CCXT 4.x (renamed to coinbasepro, then coinbase)
+    # huobipro=ccxt.huobipro,  # Removed in CCXT 4.x (use 'huobi' instead)
+    # okex=ccxt.okex,  # Removed in CCXT 4.x (use 'okx' instead)
+    hitbtc=ccxt.hitbtc,  # Updated from hitbtc2
     kucoin=ccxt.kucoin,
 )
 

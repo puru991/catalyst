@@ -28,11 +28,13 @@ __all__ = [
     'unicode',
     'normalize_date',
     'iNaT',
+    'information_ratio',
 ]
 
 
 # Pandas compatibility functions
 import pandas as pd
+import numpy as np
 
 
 def normalize_date(dt):
@@ -69,3 +71,44 @@ except ImportError:
     except (ImportError, AttributeError):
         # Fallback: use pandas NaT value
         iNaT = pd.NaT.value
+
+
+# Empyrical compatibility - information_ratio was removed in empyrical-reloaded
+def information_ratio(returns, factor_returns):
+    """
+    Calculate the information ratio (IR) of a strategy.
+
+    The information ratio is the annualized excess return divided by the
+    tracking error (standard deviation of excess returns).
+
+    Parameters
+    ----------
+    returns : pd.Series or np.ndarray
+        Daily returns of the strategy
+    factor_returns : pd.Series or np.ndarray
+        Daily returns of the benchmark/factor
+
+    Returns
+    -------
+    float
+        The information ratio
+    """
+    if len(returns) == 0 or len(factor_returns) == 0:
+        return np.nan
+
+    # Calculate excess returns
+    excess_returns = np.asarray(returns) - np.asarray(factor_returns)
+
+    # Tracking error (std of excess returns)
+    tracking_error = np.std(excess_returns, ddof=1)
+
+    if tracking_error == 0 or np.isnan(tracking_error):
+        return np.nan
+
+    # Annualized excess return / tracking error
+    # Assuming daily returns, annualize with sqrt(252)
+    mean_excess = np.mean(excess_returns)
+    annualized_excess = mean_excess * 252
+    annualized_tracking_error = tracking_error * np.sqrt(252)
+
+    return annualized_excess / annualized_tracking_error

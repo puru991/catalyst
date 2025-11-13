@@ -16,13 +16,13 @@ import warnings
 from contextlib import contextmanager
 from functools import wraps
 
-from pandas.tslib import normalize_date
+from catalyst.utils.compat import normalize_date
 import pandas as pd
 import numpy as np
 
 from six import iteritems, PY2, string_types
 from cpython cimport bool
-from collections import Iterable
+from collections.abc import Iterable
 
 from catalyst.assets import (Asset,
                             AssetConvertible,

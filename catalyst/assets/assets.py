@@ -271,8 +271,9 @@ class AssetFinder(object):
     @preprocess(engine=coerce_string_to_eng)
     def __init__(self, engine, future_chain_predicates=CHAIN_PREDICATES):
         self.engine = engine
-        metadata = sa.MetaData(bind=engine)
-        metadata.reflect(only=asset_db_table_names)
+        # SQLAlchemy 2.x: MetaData() doesn't take bind, use reflect(bind=...)
+        metadata = sa.MetaData()
+        metadata.reflect(bind=engine, only=asset_db_table_names)
         for table_name in asset_db_table_names:
             setattr(self, table_name, metadata.tables[table_name])
 

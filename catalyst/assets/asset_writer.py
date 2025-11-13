@@ -300,8 +300,9 @@ def check_version_info(conn, version_table, expected_version):
 
     Parameters
     ----------
-    conn : sa.Connection
-        The connection to use to perform the check.
+    conn : sa.Connection or sa.Engine
+        The connection or engine to use to perform the check.
+        In SQLAlchemy 2.x, if an engine is passed, will create a connection.
     version_table : sa.Table
         The version table of the asset database
     expected_version : int
@@ -312,11 +313,19 @@ def check_version_info(conn, version_table, expected_version):
     AssetDBVersionError
         If the version is in the table and not equal to ASSET_DB_VERSION.
     """
-
-    # Read the version out of the table
-    version_from_table = conn.execute(
-        sa.select((version_table.c.version,)),
-    ).scalar()
+    # SQLAlchemy 2.x: Handle both Engine and Connection
+    # If conn is an Engine, create a connection
+    if hasattr(conn, 'connect'):
+        # It's an Engine, create a connection
+        with conn.connect() as connection:
+            version_from_table = connection.execute(
+                sa.select(version_table.c.version),
+            ).scalar()
+    else:
+        # It's already a Connection
+        version_from_table = conn.execute(
+            sa.select(version_table.c.version),
+        ).scalar()
 
     # A db without a version is considered v0
     if version_from_table is None:

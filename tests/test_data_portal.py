@@ -17,7 +17,7 @@ from collections import OrderedDict
 from numpy import array, append, nan, full
 from numpy.testing import assert_almost_equal
 import pandas as pd
-from pandas.tslib import Timedelta
+from pandas import Timedelta
 
 from catalyst.assets import Equity, Future
 from catalyst.data.data_portal import HISTORY_FREQUENCIES, OHLCV_FIELDS

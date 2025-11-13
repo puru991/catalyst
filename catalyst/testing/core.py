@@ -893,12 +893,12 @@ class SubTestFailures(AssertionError):
         self.failures = failures
 
     def __str__(self):
-        return 'failures:\n  %s' % '\n  '.join(
+        return 'failures:\n  %s' % '\n  '.join((
             '\n    '.join((
                 ', '.join('%s=%r' % item for item in scope.items()),
                 '%s: %s' % (type(exc).__name__, exc),
-            )) for scope, exc in self.failures,
-        )
+            )) for scope, exc in self.failures
+        ))
 
 
 @nottest

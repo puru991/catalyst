@@ -640,25 +640,37 @@ class TradingCalendar(with_metaclass(ABCMeta)):
         """
         sched = self.schedule
 
-        # `market_open` and `market_close` should be timezone aware, but pandas
-        # 0.16.1 does not appear to support this:
-        # http://pandas.pydata.org/pandas-docs/stable/whatsnew.html#datetime-with-tz  # noqa
+        # Helper to handle both tz-aware and tz-naive timestamps
+        def ensure_utc(ts):
+            if ts.tz is None:
+                return ts.tz_localize('UTC')
+            elif str(ts.tz) == 'UTC':
+                return ts
+            else:
+                return ts.tz_convert('UTC')
+
         return (
-            sched.at[session_label, 'market_open'].tz_localize('UTC'),
-            sched.at[session_label, 'market_close'].tz_localize('UTC'),
+            ensure_utc(sched.at[session_label, 'market_open']),
+            ensure_utc(sched.at[session_label, 'market_close']),
         )
 
     def session_open(self, session_label):
-        return self.schedule.at[
-            session_label,
-            'market_open'
-        ].tz_localize('UTC')
+        ts = self.schedule.at[session_label, 'market_open']
+        if ts.tz is None:
+            return ts.tz_localize('UTC')
+        elif str(ts.tz) == 'UTC':
+            return ts
+        else:
+            return ts.tz_convert('UTC')
 
     def session_close(self, session_label):
-        return self.schedule.at[
-            session_label,
-            'market_close'
-        ].tz_localize('UTC')
+        ts = self.schedule.at[session_label, 'market_close']
+        if ts.tz is None:
+            return ts.tz_localize('UTC')
+        elif str(ts.tz) == 'UTC':
+            return ts
+        else:
+            return ts.tz_convert('UTC')
 
     def session_opens_in_range(self, start_session_label, end_session_label):
         return self.schedule.loc[

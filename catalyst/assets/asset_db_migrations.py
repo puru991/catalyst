@@ -28,7 +28,7 @@ def downgrade(engine, desired_version):
         metadata = sa.MetaData(conn)
         metadata.reflect()
         version_info_table = metadata.tables['version_info']
-        starting_version = sa.select((version_info_table.c.version,)).scalar()
+        starting_version = sa.select(version_info_table.c.version).scalar()
 
         # Check for accidental upgrade
         if starting_version < desired_version:

@@ -400,7 +400,7 @@ class AssetFinder(object):
         router_cols = self.asset_router.c
 
         for assets in group_into_chunks(missing):
-            query = sa.select((router_cols.sid, router_cols.asset_type)).where(
+            query = sa.select(router_cols.sid, router_cols.asset_type).where(
                 self.asset_router.c.sid.in_(map(int, assets))
             )
             for sid, type_ in query.execute().fetchall():
@@ -999,7 +999,7 @@ class AssetFinder(object):
         fc_cols = self.futures_contracts.c
 
         return [r.sid for r in
-                list(sa.select((fc_cols.sid,)).where(
+                list(sa.select(fc_cols.sid).where(
                     (fc_cols.root_symbol == root_symbol) &
                     (fc_cols.start_date != pd.NaT.value)).order_by(
                         fc_cols.sid).execute().fetchall())]
@@ -1077,9 +1077,9 @@ class AssetFinder(object):
         def _(self):
             return tuple(map(
                 itemgetter('sid'),
-                sa.select((
-                    getattr(self, tblattr).c.sid,
-                )).execute().fetchall(),
+                sa.select(
+                    getattr(self, tblattr).c.sid
+                ).execute().fetchall(),
             ))
 
         return _
@@ -1262,11 +1262,11 @@ class AssetFinder(object):
         equities_cols = self.equities.c
         buf = np.array(
             tuple(
-                sa.select((
+                sa.select(
                     equities_cols.sid,
                     equities_cols.start_date,
-                    equities_cols.end_date,
-                )).execute(),
+                    equities_cols.end_date
+                ).execute(),
             ), dtype='<f8',  # use doubles so we get NaNs
         )
         lifetimes = np.recarray(

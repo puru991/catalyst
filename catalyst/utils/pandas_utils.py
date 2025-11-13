@@ -14,6 +14,16 @@ pandas_version = StrictVersion(pd.__version__)
 
 
 def july_5th_holiday_observance(datetime_index):
+    """
+    Observance function for July 5th holiday.
+
+    In pandas 2.x, this receives individual Timestamp objects.
+    In older pandas, this received a DatetimeIndex.
+    """
+    # Handle individual Timestamp (pandas 2.x)
+    if isinstance(datetime_index, pd.Timestamp):
+        return datetime_index if datetime_index.year != 2013 else pd.NaT
+    # Handle DatetimeIndex (older pandas)
     return datetime_index[datetime_index.year != 2013]
 
 

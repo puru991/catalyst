@@ -820,16 +820,22 @@ class TradingCalendar(with_metaclass(ABCMeta)):
 
         (This is shared logic for computing special opens and special closes.)
         """
-        _dates = DatetimeIndex([], tz='UTC').union_many(
-            [
-                holidays_at_time(calendar, start_date, end_date, time_,
-                                 self.tz)
-                for time_, calendar in calendars
-            ] + [
-                days_at_time(datetimes, time_, self.tz)
-                for time_, datetimes in ad_hoc_dates
-            ]
-        )
+        # union_many was removed in pandas 2.x, use manual union
+        from functools import reduce
+        all_dates = [
+            holidays_at_time(calendar, start_date, end_date, time_,
+                             self.tz)
+            for time_, calendar in calendars
+        ] + [
+            days_at_time(datetimes, time_, self.tz)
+            for time_, datetimes in ad_hoc_dates
+        ]
+
+        if all_dates:
+            _dates = reduce(lambda x, y: x.union(y), all_dates, DatetimeIndex([], tz='UTC'))
+        else:
+            _dates = DatetimeIndex([], tz='UTC')
+
         return _dates[(_dates >= start_date) & (_dates <= end_date)]
 
     def _calculate_special_opens(self, start, end):

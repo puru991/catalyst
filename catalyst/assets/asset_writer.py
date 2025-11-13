@@ -342,7 +342,8 @@ def write_version_info(conn, version_table, version_value):
         The version to write in to the database
 
     """
-    conn.execute(sa.insert(version_table, values={'version': version_value}))
+    # SQLAlchemy 2.x: insert().values() instead of insert(values=...)
+    conn.execute(sa.insert(version_table).values({'version': version_value}))
 
 
 class _empty(object):
@@ -589,7 +590,8 @@ class AssetDBWriter(object):
         has_tables : bool
             True if any tables are present, otherwise False.
         """
-        conn = txn.connect()
+        # In SQLAlchemy 2.x, txn is already a Connection object
+        conn = txn
         for table_name in asset_db_table_names:
             if txn.dialect.has_table(conn, table_name):
                 return True

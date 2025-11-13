@@ -26,4 +26,46 @@ unicode = type(u'')
 __all__ = [
     'mappingproxy',
     'unicode',
+    'normalize_date',
+    'iNaT',
 ]
+
+
+# Pandas compatibility functions
+import pandas as pd
+
+
+def normalize_date(dt):
+    """
+    Normalize a datetime to midnight (00:00:00).
+
+    This is a replacement for the removed pandas.tslib.normalize_date function.
+
+    Parameters
+    ----------
+    dt : datetime-like
+        The datetime to normalize
+
+    Returns
+    -------
+    pd.Timestamp
+        The normalized timestamp at midnight
+    """
+    if dt is None:
+        return None
+    if isinstance(dt, str):
+        dt = pd.Timestamp(dt)
+    elif not isinstance(dt, pd.Timestamp):
+        dt = pd.Timestamp(dt)
+    return dt.normalize()
+
+
+# pandas.tslib.iNaT moved to pandas._libs.tslibs.nattype.iNaT
+try:
+    from pandas._libs.tslibs.nattype import iNaT
+except ImportError:
+    try:
+        from pandas.tslib import iNaT  # type: ignore
+    except (ImportError, AttributeError):
+        # Fallback: use pandas NaT value
+        iNaT = pd.NaT.value

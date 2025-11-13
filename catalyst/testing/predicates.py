@@ -103,7 +103,7 @@ def keywords(func):
         return keywords(func.__init__)
     elif isinstance(func, partial):
         return keywords(func.func)
-    return inspect.getargspec(func).args
+    return inspect.getfullargspec(func).args
 
 
 def filter_kwargs(f, kwargs):

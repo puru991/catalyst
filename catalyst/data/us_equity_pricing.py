@@ -49,7 +49,7 @@ from pandas import (
     to_datetime,
     Timestamp,
 )
-from pandas.tslib import iNaT
+from catalyst.utils.compat import iNaT
 from six import (
     iteritems,
     string_types,

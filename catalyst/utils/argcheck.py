@@ -103,7 +103,8 @@ class Argument(namedtuple('Argument', ['name', 'default'])):
         This returns a namedtuple called Argspec that has three fields named:
         args, starargs, and kwargs.
         """
-        args, varargs, keywords, defaults = inspect.getargspec(callable_)
+        argspec = inspect.getfullargspec(callable_)
+        args, varargs, keywords, defaults = argspec.args, argspec.varargs, argspec.varkw, argspec.defaults
         defaults = list(defaults or [])
 
         if getattr(callable_, '__self__', None) is not None:

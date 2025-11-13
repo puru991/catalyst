@@ -4,30 +4,94 @@ Utilities for validating inputs to user-facing API functions.
 from textwrap import dedent
 from types import CodeType
 from functools import wraps
-from inspect import getargspec
+from inspect import getfullargspec as getargspec
 from uuid import uuid4
+import sys
 
 from toolz.curried.operator import getitem
 from six import viewkeys, exec_, PY3
 
 
-_code_argorder = (
-    ('co_argcount', 'co_kwonlyargcount') if PY3 else ('co_argcount',)
-) + (
-    'co_nlocals',
-    'co_stacksize',
-    'co_flags',
-    'co_code',
-    'co_consts',
-    'co_names',
-    'co_varnames',
-    'co_filename',
-    'co_name',
-    'co_firstlineno',
-    'co_lnotab',
-    'co_freevars',
-    'co_cellvars',
-)
+# Python 3.8+ added co_posonlyargcount
+# Python 3.10+ replaced co_lnotab with co_linetable
+# Python 3.11+ added co_qualname and co_exceptiontable
+if sys.version_info >= (3, 11):
+    _code_argorder = (
+        'co_argcount',
+        'co_posonlyargcount',
+        'co_kwonlyargcount',
+        'co_nlocals',
+        'co_stacksize',
+        'co_flags',
+        'co_code',
+        'co_consts',
+        'co_names',
+        'co_varnames',
+        'co_filename',
+        'co_name',
+        'co_qualname',
+        'co_firstlineno',
+        'co_linetable',
+        'co_exceptiontable',
+        'co_freevars',
+        'co_cellvars',
+    )
+elif sys.version_info >= (3, 10):
+    _code_argorder = (
+        'co_argcount',
+        'co_posonlyargcount',
+        'co_kwonlyargcount',
+        'co_nlocals',
+        'co_stacksize',
+        'co_flags',
+        'co_code',
+        'co_consts',
+        'co_names',
+        'co_varnames',
+        'co_filename',
+        'co_name',
+        'co_firstlineno',
+        'co_linetable',
+        'co_freevars',
+        'co_cellvars',
+    )
+elif sys.version_info >= (3, 8):
+    _code_argorder = (
+        'co_argcount',
+        'co_posonlyargcount',
+        'co_kwonlyargcount',
+        'co_nlocals',
+        'co_stacksize',
+        'co_flags',
+        'co_code',
+        'co_consts',
+        'co_names',
+        'co_varnames',
+        'co_filename',
+        'co_name',
+        'co_firstlineno',
+        'co_lnotab',
+        'co_freevars',
+        'co_cellvars',
+    )
+else:
+    _code_argorder = (
+        ('co_argcount', 'co_kwonlyargcount') if PY3 else ('co_argcount',)
+    ) + (
+        'co_nlocals',
+        'co_stacksize',
+        'co_flags',
+        'co_code',
+        'co_consts',
+        'co_names',
+        'co_varnames',
+        'co_filename',
+        'co_name',
+        'co_firstlineno',
+        'co_lnotab',
+        'co_freevars',
+        'co_cellvars',
+    )
 
 NO_DEFAULT = object()
 
@@ -80,7 +144,8 @@ def preprocess(*_unused, **processors):
         raise TypeError("preprocess() doesn't accept positional arguments")
 
     def _decorator(f):
-        args, varargs, varkw, defaults = argspec = getargspec(f)
+        argspec = getargspec(f)
+        args, varargs, varkw, defaults = argspec.args, argspec.varargs, argspec.varkw, argspec.defaults
         if defaults is None:
             defaults = ()
         no_defaults = (NO_DEFAULT,) * (len(args) - len(defaults))

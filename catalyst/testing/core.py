@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from contextlib import contextmanager
 from functools import wraps
 import gzip
-from inspect import getargspec
+from inspect import getfullargspec as getargspec
 from itertools import (
     combinations,
     count,

@@ -253,7 +253,7 @@ def _split_symbol_mappings(df):
             ' following symbols:\n%s' % (
                 len(ambigious),
                 '' if len(ambigious) == 1 else 's',
-                '\n'.join(
+                '\n'.join((
                     '%s:\n  intersections: %s\n  %s' % (
                         symbol,
                         tuple(map(_format_range, intersections)),
@@ -263,8 +263,8 @@ def _split_symbol_mappings(df):
                     for symbol, (intersections, df) in sorted(
                         ambigious.items(),
                         key=first,
-                    ),
-                ),
+                    )
+                )),
             )
         )
     return (

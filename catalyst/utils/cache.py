@@ -1,7 +1,7 @@
 """
 Caching utilities for catalyst
 """
-from collections import MutableMapping
+from collections.abc import MutableMapping
 import errno
 import os
 import pickle

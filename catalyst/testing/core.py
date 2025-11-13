@@ -1124,7 +1124,8 @@ def parameter_space(__fail_fast=False, **params):
         argspec = getargspec(f)
         if argspec.varargs:
             raise AssertionError("parameter_space() doesn't support *args")
-        if argspec.keywords:
+        # Python 3: getfullargspec returns varkw instead of keywords
+        if argspec.varkw:
             raise AssertionError("parameter_space() doesn't support **kwargs")
         if argspec.defaults:
             raise AssertionError("parameter_space() doesn't support defaults.")

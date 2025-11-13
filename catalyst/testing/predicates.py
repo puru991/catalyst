@@ -484,10 +484,12 @@ assert_frame_equal = _register_assert_equal_wrapper(
     pd.DataFrame,
     assert_frame_equal,
 )
-assert_panel_equal = _register_assert_equal_wrapper(
-    pd.Panel,
-    assert_panel_equal,
-)
+# Panel was removed in pandas 1.0+
+if assert_panel_equal is not None and hasattr(pd, 'Panel'):
+    assert_panel_equal = _register_assert_equal_wrapper(
+        pd.Panel,
+        assert_panel_equal,
+    )
 assert_series_equal = _register_assert_equal_wrapper(
     pd.Series,
     assert_series_equal,

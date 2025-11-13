@@ -25,7 +25,7 @@ import pandas as pd
 from nose_parameterized import parameterized
 from pandas import read_csv
 from pandas import Timedelta
-from pandas.util.testing import assert_index_equal
+from pandas.testing import assert_index_equal
 from pytz import timezone
 from toolz import concat
 

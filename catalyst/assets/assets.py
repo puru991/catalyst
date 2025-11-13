@@ -138,11 +138,25 @@ def merge_ownership_periods(mappings):
     )
 
 
-def build_ownership_map(table, key_from_row, value_from_row):
+def build_ownership_map(table, key_from_row, value_from_row, engine=None):
     """
     Builds a dict mapping to lists of OwnershipPeriods, from a db table.
+
+    Parameters
+    ----------
+    engine : sa.Engine, optional
+        The engine to use for executing queries. If not provided, will attempt
+        to get from table.bind (SQLAlchemy 1.x) or raise error.
     """
-    rows = sa.select(table.c).execute().fetchall()
+    # SQLAlchemy 2.x: execute through connection
+    if engine is None:
+        # Try to get from table (SA 1.x compatibility)
+        engine = getattr(table, 'bind', None)
+        if engine is None:
+            raise ValueError("engine parameter is required in SQLAlchemy 2.x")
+
+    with engine.connect() as conn:
+        rows = conn.execute(sa.select(table.c)).mappings().fetchall()
 
     mappings = {}
     for row in rows:
@@ -151,9 +165,9 @@ def build_ownership_map(table, key_from_row, value_from_row):
             [],
         ).append(
             OwnershipPeriod(
-                pd.Timestamp(row.start_date, unit='ns', tz='utc'),
-                pd.Timestamp(row.end_date, unit='ns', tz='utc'),
-                row.sid,
+                pd.Timestamp(row['start_date'], unit='ns', tz='utc'),
+                pd.Timestamp(row['end_date'], unit='ns', tz='utc'),
+                row['sid'],
                 value_from_row(row),
             ),
         )
@@ -342,6 +356,7 @@ class AssetFinder(object):
                 lambda row: (row.company_symbol, row.share_class_symbol)
             ),
             value_from_row=lambda row: row.symbol,
+            engine=self.engine,
         )
 
     @lazyval
@@ -403,9 +418,10 @@ class AssetFinder(object):
             query = sa.select(router_cols.sid, router_cols.asset_type).where(
                 self.asset_router.c.sid.in_(map(int, assets))
             )
-            for sid, type_ in query.execute().fetchall():
-                missing.remove(sid)
-                found[sid] = self._asset_type_cache[sid] = type_
+            with self.engine.connect() as conn:
+                for sid, type_ in conn.execute(query).fetchall():
+                    missing.remove(sid)
+                    found[sid] = self._asset_type_cache[sid] = type_
 
             for sid in missing:
                 found[sid] = self._asset_type_cache[sid] = None
@@ -558,13 +574,15 @@ class AssetFinder(object):
 
     @staticmethod
     def _select_assets_by_sid(asset_tbl, sids):
-        return sa.select([asset_tbl]).where(
+        # SQLAlchemy 2.x: don't wrap table in list
+        return sa.select(asset_tbl).where(
             asset_tbl.c.sid.in_(map(int, sids))
         )
 
     @staticmethod
     def _select_asset_by_symbol(asset_tbl, symbol):
-        return sa.select([asset_tbl]).where(asset_tbl.c.symbol == symbol)
+        # SQLAlchemy 2.x: don't wrap table in list
+        return sa.select(asset_tbl).where(asset_tbl.c.symbol == symbol)
 
     def _select_most_recent_symbols_chunk(self, sid_group):
         """Retrieve the most recent symbol for a set of sids.
@@ -591,32 +609,34 @@ class AssetFinder(object):
         of the sids.
         """
         symbol_cols = self.equity_symbol_mappings.c
-        inner = sa.select(
-            (symbol_cols.sid,) +
-            tuple(map(
-                op.getitem(symbol_cols),
-                symbol_columns,
-            )),
-        ).where(
+        # SQLAlchemy 2.x: unpack tuple of columns with *
+        columns = (symbol_cols.sid,) + tuple(map(
+            op.getitem(symbol_cols),
+            symbol_columns,
+        ))
+        inner = sa.select(*columns).where(
             symbol_cols.sid.in_(map(int, sid_group)),
         ).order_by(
             symbol_cols.end_date.asc(),
         )
-        return sa.select(inner.c).group_by(inner.c.sid)
+        # SQLAlchemy 2.x: use .subquery() before accessing .c
+        inner_subq = inner.subquery()
+        return sa.select(inner_subq.c).group_by(inner_subq.c.sid)
 
     def _lookup_most_recent_symbols(self, sids):
-        symbols = {
-            row.sid: {c: row[c] for c in symbol_columns}
-            for row in concat((
-                self.engine.execute(
-                    self._select_most_recent_symbols_chunk(sid_group),
-                ).fetchall()
-                for sid_group in partition_all(
-                    SQLITE_MAX_VARIABLE_NUMBER,
-                    sids
-                )
-            ))
-        }
+        with self.engine.connect() as conn:
+            symbols = {
+                row['sid']: {c: row[c] for c in symbol_columns}
+                for row in concat((
+                    conn.execute(
+                        self._select_most_recent_symbols_chunk(sid_group),
+                    ).mappings().fetchall()
+                    for sid_group in partition_all(
+                        SQLITE_MAX_VARIABLE_NUMBER,
+                        sids
+                    )
+                ))
+            }
 
         if len(symbols) != len(sids):
             raise EquitiesNotFound(
@@ -640,8 +660,9 @@ class AssetFinder(object):
             # Load misses from the db.
             query = self._select_assets_by_sid(asset_tbl, assets)
 
-            for row in query.execute().fetchall():
-                yield _convert_asset_timestamp_fields(mkdict(row))
+            with self.engine.connect() as conn:
+                for row in conn.execute(query).mappings().fetchall():
+                    yield _convert_asset_timestamp_fields(mkdict(row))
 
     def _retrieve_assets(self, sids, asset_tbl, asset_type):
         """
@@ -894,8 +915,9 @@ class AssetFinder(object):
 
         """
 
-        data = self._select_asset_by_symbol(self.futures_contracts, symbol)\
-                   .execute().fetchone()
+        query = self._select_asset_by_symbol(self.futures_contracts, symbol)
+        with self.engine.connect() as conn:
+            data = conn.execute(query).mappings().fetchone()
 
         # If no data found, raise an exception
         if not data:
@@ -998,19 +1020,21 @@ class AssetFinder(object):
     def _get_contract_sids(self, root_symbol):
         fc_cols = self.futures_contracts.c
 
-        return [r.sid for r in
-                list(sa.select(fc_cols.sid).where(
-                    (fc_cols.root_symbol == root_symbol) &
-                    (fc_cols.start_date != pd.NaT.value)).order_by(
-                        fc_cols.sid).execute().fetchall())]
+        query = sa.select(fc_cols.sid).where(
+            (fc_cols.root_symbol == root_symbol) &
+            (fc_cols.start_date != pd.NaT.value)).order_by(fc_cols.sid)
+        with self.engine.connect() as conn:
+            return [r['sid'] for r in conn.execute(query).mappings().fetchall()]
 
     def _get_root_symbol_exchange(self, root_symbol):
         fc_cols = self.futures_root_symbols.c
 
         fields = (fc_cols.exchange,)
 
-        exchange = sa.select(fields).where(
-            fc_cols.root_symbol == root_symbol).execute().scalar()
+        query = sa.select(fields).where(
+            fc_cols.root_symbol == root_symbol)
+        with self.engine.connect() as conn:
+            exchange = conn.execute(query).scalar()
 
         if exchange is not None:
             return exchange
@@ -1075,12 +1099,13 @@ class AssetFinder(object):
 
     def _make_sids(tblattr):
         def _(self):
-            return tuple(map(
-                itemgetter('sid'),
-                sa.select(
-                    getattr(self, tblattr).c.sid
-                ).execute().fetchall(),
-            ))
+            # SQLAlchemy 2.x: execute through connection, not on select
+            with self.engine.connect() as conn:
+                result = conn.execute(
+                    sa.select(getattr(self, tblattr).c.sid)
+                )
+                # Use .mappings() for dict-like access in SQLAlchemy 2.x
+                return tuple(map(itemgetter('sid'), result.mappings().fetchall()))
 
         return _
 
@@ -1260,15 +1285,16 @@ class AssetFinder(object):
         Compute and cache a recarry of asset lifetimes.
         """
         equities_cols = self.equities.c
-        buf = np.array(
-            tuple(
-                sa.select(
-                    equities_cols.sid,
-                    equities_cols.start_date,
-                    equities_cols.end_date
-                ).execute(),
-            ), dtype='<f8',  # use doubles so we get NaNs
+        query = sa.select(
+            equities_cols.sid,
+            equities_cols.start_date,
+            equities_cols.end_date
         )
+        with self.engine.connect() as conn:
+            buf = np.array(
+                tuple(conn.execute(query)),
+                dtype='<f8',  # use doubles so we get NaNs
+            )
         lifetimes = np.recarray(
             buf=buf,
             shape=(len(buf),),

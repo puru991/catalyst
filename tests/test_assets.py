@@ -29,7 +29,7 @@ import warnings
 from nose_parameterized import parameterized
 from numpy import full, int32, int64
 import pandas as pd
-from pandas.util.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal
 from six import PY2, viewkeys
 import sqlalchemy as sa
 

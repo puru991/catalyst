@@ -28,7 +28,7 @@ from pandas import (
     DataFrame,
     Timestamp,
 )
-from pandas.util.testing import assert_index_equal
+from pandas.testing import assert_index_equal
 
 from catalyst.data.us_equity_pricing import (
     BcolzDailyBarReader,

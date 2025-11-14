@@ -902,6 +902,7 @@ class CCXT(Exchange):
 
             # https://github.com/ccxt/ccxt/issues/1483
             market = self.api.markets[symbol]
+            # CCXT 4.x: 'lots' field replaced with market['limits']['amount']['min']
             if 'lots' in market and market['lots'] > amount:
                 raise CreateOrderError(
                     exchange=self.name,
@@ -909,6 +910,15 @@ class CCXT(Exchange):
                         amount
                     )
                 )
+            elif 'limits' in market and 'amount' in market['limits']:
+                min_amount = market['limits']['amount'].get('min', 0)
+                if min_amount and min_amount > amount:
+                    raise CreateOrderError(
+                        exchange=self.name,
+                        e='order amount {} lower than minimum: {}'.format(
+                            amount, min_amount
+                        )
+                    )
         adj_amount = round(abs(amount), asset.decimals)
         prec_amount = self.api.amount_to_precision(symbol, adj_amount)
         before_order_dt = pd.Timestamp.utcnow()
